@@ -11,13 +11,24 @@ app.use(express.json());
 app.use("/api/wpm/", wpmRoute);
 app.use("/api/user/", userRoute);
 
-mongoose
-  .connect(process.env.CONNECTION)
-  .then(() => {
-    app.listen(process.env.PORT, () => {
-      console.log("Listening to the port and connecting to the db.");
-    });
-  })
-  .catch((err: Error) => {
-    console.log(err);
-  });
+const serverless = require("serverless-http");
+
+async function ensureDBConnection() {
+  if (mongoose.connection && mongoose.connection.readyState === 1) return;
+  try {
+    await mongoose.connect(process.env.CONNECTION);
+    console.log("Connected to the database (serverless).");
+  } catch (err: any) {
+    console.log("Database connection error:", err);
+    throw err;
+  }
+}
+
+// Export the app (useful for testing or platforms like Vercel)
+module.exports = app;
+// Export a serverless handler for platforms like AWS Lambda
+const _serverlessHandler = serverless(app);
+module.exports.handler = async (event: any, context: any) => {
+  await ensureDBConnection();
+  return _serverlessHandler(event, context);
+};
