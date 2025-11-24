@@ -11,24 +11,37 @@ app.use(express.json());
 app.use("/api/wpm/", wpmRoute);
 app.use("/api/user/", userRoute);
 
-const serverless = require("serverless-http");
+// mongoose
+//   .connect(process.env.CONNECTION)
+//   .then(() => {
+//     app.listen(process.env.PORT, () => {
+//       console.log("Listening to the port and connecting to the db.");
+//     });
+//   })
+//   .catch((err: Error) => {
+//     console.log(err);
+//   });
 
-async function ensureDBConnection() {
-  if (mongoose.connection && mongoose.connection.readyState === 1) return;
+let isConnected = false;
+
+async function connectToDatabase() {
   try {
-    await mongoose.connect(process.env.CONNECTION);
-    console.log("Connected to the database (serverless).");
-  } catch (err: any) {
-    console.log("Database connection error:", err);
-    throw err;
+    await mongoose.connect(process.env.CONNECTION ,{
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+    isConnected = true;
+    console.log("Connected to the database.");
+  } catch (err) {
+    console.error("Error connecting to the database:", err);
   }
 }
 
-// Export the app (useful for testing or platforms like Vercel)
-module.exports = app;
-// Export a serverless handler for platforms like AWS Lambda
-const _serverlessHandler = serverless(app);
-module.exports.handler = async (event: any, context: any) => {
-  await ensureDBConnection();
-  return _serverlessHandler(event, context);
-};
+// app.use((req, res, next) => {
+//   if (!isConnected) {
+//     connectToDatabase();
+//   }
+//   next();
+// });
+
+// module.exports = app;
