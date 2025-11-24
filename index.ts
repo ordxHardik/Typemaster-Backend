@@ -11,22 +11,12 @@ app.use(express.json());
 app.use("/api/wpm/", wpmRoute);
 app.use("/api/user/", userRoute);
 
-// mongoose
-//   .connect(process.env.CONNECTION)
-//   .then(() => {
-//     app.listen(process.env.PORT, () => {
-//       console.log("Listening to the port and connecting to the db.");
-//     });
-//   })
-//   .catch((err: Error) => {
-//     console.log(err);
-//   });
-
 let isConnected = false;
 
 async function connectToDatabase() {
+  if (isConnected) return;
   try {
-    await mongoose.connect(process.env.CONNECTION ,{
+    await mongoose.connect(process.env.CONNECTION, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
     });
@@ -34,14 +24,19 @@ async function connectToDatabase() {
     console.log("Connected to the database.");
   } catch (err) {
     console.error("Error connecting to the database:", err);
+    throw err;
   }
 }
 
-// app.use((req, res, next) => {
-//   if (!isConnected) {
-//     connectToDatabase();
-//   }
-//   next();
-// });
+// Middleware to ensure DB connection on every request
+app.use(async (req: any, res: any, next: any) => {
+  try {
+    await connectToDatabase();
+    next();
+  } catch (err) {
+    res.status(500).json({ error: "Database connection failed" });
+  }
+});
 
-// module.exports = app;
+// Export for Vercel serverless
+module.exports = app;
